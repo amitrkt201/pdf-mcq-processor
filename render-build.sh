@@ -1,3 +1,8 @@
+# Network diagnostics
+echo "---- Testing Network Connectivity ----"
+ping -c 3 pypi.org
+curl -I https://pypi.org
+echo "-------------------------------------"
 #!/bin/bash
 # Render Build Script with Advanced Network Resilience
 
