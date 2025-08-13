@@ -1,5 +1,5 @@
 #!/bin/bash
-# Render Build Script with Enhanced Retries
+# Render Build Script with Network Resilience
 
 echo "---- Starting Build Process ----"
 date
@@ -7,7 +7,7 @@ echo "Python version: $(python --version)"
 echo "Pip version: $(pip --version)"
 
 # Install system dependencies for Pillow
-echo "Installing build dependencies for Pillow..."
+echo "Installing build dependencies..."
 apt-get update
 apt-get install -y \
     libjpeg-dev \
@@ -20,31 +20,30 @@ apt-get install -y \
     tcl-dev \
     build-essential
 
-# Install Python dependencies with enhanced retries
-for i in {1..5}; do
-    echo "Attempt $i: Installing Python dependencies..."
-    pip install --no-cache-dir -r requirements.txt
-    
-    if [ $? -eq 0 ]; then
-        echo "Dependencies installed successfully!"
-        break
-    else
-        echo "Installation failed. Retrying in 30 seconds..."
-        sleep 30
-    fi
-done
+# Function to install with retries and network resilience
+install_with_retry() {
+    local package=$1
+    for i in {1,2,3,4,5}; do
+        echo "Attempt $i: Installing $package"
+        pip install --no-cache-dir --only-binary=:all: "$package"
+        if [ $? -eq 0 ]; then
+            echo "$package installed successfully!"
+            return 0
+        else
+            echo "Installation failed. Retrying in 10 seconds..."
+            sleep 10
+        fi
+    done
+    echo "ERROR: Failed to install $package after 5 attempts"
+    return 1
+}
 
-# Check if installation succeeded
-if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to install dependencies after 5 attempts"
-    echo "Attempting to install Pillow separately..."
-    pip install --no-cache-dir --only-binary=:all: pillow==9.5.0
-    
-    if [ $? -ne 0 ]; then
-        echo "Pillow installation failed. Trying with source build..."
-        pip install --no-cache-dir pillow==9.5.0
-    fi
-fi
+# Install core dependencies with network resilience
+install_with_retry pandas==2.0.3
+install_with_retry pillow==10.3.0
+
+# Install remaining dependencies
+pip install --no-cache-dir -r requirements.txt
 
 echo "---- Build Completed Successfully ----"
 date
