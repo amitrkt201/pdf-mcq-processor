@@ -9,8 +9,15 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
     poppler-utils \
     ghostscript \
-    libmupdf-dev \
-    swig \
+    libjpeg-dev \
+    zlib1g-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libopenjp2-7-dev \
+    libtiff5-dev \
+    tk-dev \
+    tcl-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -34,4 +41,4 @@ ENV PORT=10000
 EXPOSE $PORT
 
 # Start command
-CMD ["gunicorn", "app:app", "-w", "2", "-b", "0.0.0.0:$PORT"]
+CMD ["gunicorn", "app:app", "-w", "1", "-b", "0.0.0.0:$PORT"]  # Reduced workers for free tier

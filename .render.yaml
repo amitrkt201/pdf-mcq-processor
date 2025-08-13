@@ -17,7 +17,8 @@ services:
         value: "10000"
     plan: free
     buildCaching: true
-    buildTimeout: 1800  # 30 minutes
+    buildTimeout: 3600  # 60 minutes
+    autoDeploy: true
 
   - type: redis
     name: pdf-redis
