@@ -1,5 +1,4 @@
-# Use Python 3.10 base image with specific version
-FROM python:3.10.13-slim
+FROM python:3.10.13-slim-bullseye  # Stable Debian-based image
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -28,7 +27,7 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir --only-binary pandas -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -41,4 +40,4 @@ ENV PORT=10000
 EXPOSE $PORT
 
 # Start command
-CMD ["gunicorn", "app:app", "-w", "1", "-b", "0.0.0.0:$PORT"]
+CMD ["gunicorn", "app:app", "-w", "1", "-b", "0.0.0.0:$PORT"]  # Single worker for free tier

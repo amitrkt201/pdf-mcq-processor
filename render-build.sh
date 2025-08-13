@@ -1,10 +1,5 @@
-# Network diagnostics
-echo "---- Testing Network Connectivity ----"
-ping -c 3 pypi.org
-curl -I https://pypi.org
-echo "-------------------------------------"
 #!/bin/bash
-# Render Build Script with Advanced Network Resilience
+# Render Build Script - Optimized for Stability
 
 echo "---- Starting Build Process ----"
 date
@@ -21,48 +16,15 @@ apt-get install -y \
     liblcms2-dev \
     libopenjp2-7-dev \
     libtiff5-dev \
-    tk-dev \
-    tcl-dev \
-    build-essential \
-    curl
+    build-essential
 
-# Function to install with retries and mirror fallback
-install_with_resilience() {
-    local package=$1
-    local mirrors=(
-        "https://pypi.org/simple"
-        "https://pypi.tuna.tsinghua.edu.cn/simple"
-        "https://mirrors.aliyun.com/pypi/simple"
-        "https://pypi.mirrors.ustc.edu.cn/simple"
-    )
-    
-    for mirror in "${mirrors[@]}"; do
-        for i in {1,2,3}; do
-            echo "Attempt $i with mirror $mirror: Installing $package"
-            pip install --no-cache-dir --retries 3 --timeout 60 --index-url "$mirror" --trusted-host "${mirror#https://}" "$package"
-            
-            if [ $? -eq 0 ]; then
-                echo "$package installed successfully!"
-                return 0
-            else
-                echo "Installation failed. Retrying in 5 seconds..."
-                sleep 5
-            fi
-        done
-    done
-    
-    echo "ERROR: Failed to install $package after multiple attempts"
-    return 1
-}
+# Upgrade pip and setuptools first
+pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Install core dependencies with enhanced resilience
-install_with_resilience pandas==2.0.3
-install_with_resilience pillow==10.3.0
-
-# Install remaining dependencies with mirror rotation
+# Install requirements with retries
 for i in {1,2,3}; do
-    echo "Attempt $i: Installing requirements.txt"
-    pip install --no-cache-dir --retries 5 --timeout 120 -r requirements.txt
+    echo "Attempt $i: Installing requirements"
+    pip install --no-cache-dir -r requirements.txt
     
     if [ $? -eq 0 ]; then
         echo "Requirements installed successfully!"
@@ -75,7 +37,7 @@ done
 
 # Final check
 if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to install dependencies after multiple attempts"
+    echo "ERROR: Failed to install dependencies after 3 attempts"
     exit 1
 fi
 
