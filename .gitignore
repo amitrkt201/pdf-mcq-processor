@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+venv/
+env/
+
+# Environment files
+.env
+.env.*
+secrets.ini
+
+# Temporary directories
+uploads/
+outputs/
+temp/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Log files
+*.log
+logs/
+
+# Docker
+docker-compose.yml
+.dockerignore
+
+# Render specific
+.render/
