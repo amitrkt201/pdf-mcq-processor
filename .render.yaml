@@ -3,18 +3,23 @@ services:
     name: pdf-processor
     runtime: docker
     dockerfile: Dockerfile
+    buildCommand: ./render-build.sh
     envVars:
       - key: REDIS_URL
         fromDatabase:
           name: pdf-redis
           property: connectionString
-      - key: MAX_PAGES
-        value: "50"
       - key: SECRET_KEY
         generateValue: true
+      - key: MAX_PAGES
+        value: "50"
+      - key: PORT
+        value: "10000"
     plan: free
-    numInstances: 1
+    buildCaching: true
+    buildTimeout: 1800  # 30 minutes
 
   - type: redis
     name: pdf-redis
     plan: free
+    region: oregon  # Choose your preferred region

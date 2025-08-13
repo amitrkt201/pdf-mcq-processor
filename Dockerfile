@@ -1,4 +1,5 @@
-FROM python:3.9-slim
+# Use Python 3.10 base image
+FROM python:3.10-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -8,25 +9,29 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
     poppler-utils \
     ghostscript \
-    && apt-get clean \
+    libmupdf-dev \
+    swig \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Install Python dependencies
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-
 # Create directories
-RUN mkdir -p /app/uploads /app/outputs
+RUN mkdir -p uploads outputs
+
+# Set environment variables
+ENV PORT=10000
+EXPOSE $PORT
 
 # Start command
-CMD gunicorn app:app -w 2 -b 0.0.0.0:$PORT
+CMD ["gunicorn", "app:app", "-w", "2", "-b", "0.0.0.0:$PORT"]

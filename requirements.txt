@@ -1,9 +1,7 @@
 flask==2.3.2
 celery==5.3.1
 redis==4.5.5
-pymupdf==1.22.5
-pytesseract==0.3.10
-opencv-python-headless==4.7.0.72
+pymupdf==1.24.0  # Updated version
 pandas==2.0.3
 openpyxl==3.1.2
 gunicorn==20.1.0
@@ -11,3 +9,5 @@ pillow==9.5.0
 langdetect==1.0.9
 python-dotenv==1.0.0
 psutil==5.9.5
+pytesseract==0.3.10
+opencv-python-headless==4.7.0.72
