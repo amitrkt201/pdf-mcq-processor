@@ -16,7 +16,11 @@ apt-get install -y \
     liblcms2-dev \
     libopenjp2-7-dev \
     libtiff5-dev \
-    build-essential
+    build-essential \
+    tesseract-ocr \
+    tesseract-ocr-hin \  # Hindi language pack
+    tesseract-ocr-eng \  # English language pack
+    libgl1  # Required for SAHI/OpenCV
 
 # Upgrade pip and setuptools first
 pip install --no-cache-dir --upgrade pip setuptools wheel
