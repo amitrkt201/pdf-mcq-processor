@@ -12,3 +12,6 @@ python-dotenv==1.0.0
 psutil==5.9.5
 pytesseract==0.3.10
 opencv-python-headless==4.7.0.72
+
+# SAHI for advanced OCR processing
+sahi==0.11.4  # Compatible with Python 3.10 and our dependencies
