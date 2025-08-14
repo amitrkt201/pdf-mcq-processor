@@ -10,8 +10,11 @@ import shutil
 import zipfile
 from PIL import Image
 from celery import current_task
-from .utils.ocr_utils import enhance_image_for_ocr
+from sahi.predict import get_sliced_prediction
+from sahi import AutoDetectionModel
+from .utils.ocr_utils import enhance_image_for_ocr, prepare_image_for_sahi
 from .utils.language_utils import separate_languages, detect_qa_structure
+from .config import Config
 
 class PDFProcessor:
     def __init__(self, pdf_type, file_urls, options):
@@ -23,9 +26,18 @@ class PDFProcessor:
         self.results = []
         self.app = current_task.app
         
+        # Initialize SAHI model with configuration
+        self.detection_model = AutoDetectionModel.from_pretrained(
+            model_type='ocr',
+            model_path=None,  # Use default OCR
+            confidence_threshold=Config.SAHI_CONFIDENCE_THRESHOLD,
+            device='cpu'  # Use CPU (Render.com doesn't support GPU)
+        )
+        
     def download_file(self, url):
-        # In production, implement actual download from WordPress
-        return url  # Placeholder
+        # Placeholder for actual download implementation
+        # In production, add logic to download from WordPress
+        return url
         
     def convert_to_images(self):
         images = []
@@ -35,7 +47,7 @@ class PDFProcessor:
             file_path = self.download_file(url)
             doc = fitz.open(file_path)
             start_page = self.options.get('start_page', 0)
-            end_page = min(self.options.get('end_page', self.app.conf.MAX_PAGES), len(doc))
+            end_page = min(self.options.get('end_page', Config.MAX_PAGES), len(doc))
             skip_pages = set(self.options.get('skip_pages', []))
             
             for page_num in range(start_page, end_page):
@@ -44,7 +56,7 @@ class PDFProcessor:
                     
                 page = doc.load_page(page_num)
                 pix = page.get_pixmap(dpi=200)
-                img_path = f"{self.app.conf.UPLOAD_DIR}/{self.task_id}_p{i}_{page_num}.png"
+                img_path = f"{Config.UPLOAD_DIR}/{self.task_id}_p{i}_{page_num}.png"
                 pix.save(img_path)
                 images.append(img_path)
                 total_pages += 1
@@ -62,12 +74,48 @@ class PDFProcessor:
             doc.close()
         return images, total_pages
         
-    def process_image(self, img_path, page_idx, total_pages):
+    def process_image_with_sahi(self, img_path, page_idx, total_pages):
+        # Load and prepare image
         img = cv2.imread(img_path)
-        processed_images = []
-        
-        # Preprocessing
         enhanced_img = enhance_image_for_ocr(img)
+        sahi_img = prepare_image_for_sahi(enhanced_img)
+        
+        # Use SAHI for OCR with slicing
+        result = get_sliced_prediction(
+            sahi_img,
+            self.detection_model,
+            slice_height=Config.SAHI_SLICE_HEIGHT,
+            slice_width=Config.SAHI_SLICE_WIDTH,
+            overlap_height_ratio=Config.SAHI_OVERLAP_RATIO,
+            overlap_width_ratio=Config.SAHI_OVERLAP_RATIO,
+            perform_standard_pred=False,
+            postprocess_type="NMS",
+            postprocess_match_metric="IOS",
+            postprocess_match_threshold=0.5,
+            verbose=0
+        )
+        
+        # Extract and combine text
+        texts = []
+        for prediction in result.object_prediction_list:
+            texts.append(prediction.text)
+        
+        # Update progress
+        current_task.update_state(
+            state='OCR',
+            meta={
+                'progress': 50 + int(30 * (page_idx + 0.5) / total_pages),
+                'stage': f'OCR page {page_idx+1}/{total_pages} (SAHI)',
+                'current_page': page_idx+1
+            }
+        )
+        
+        return '\n\n'.join(texts)
+    
+    def process_image_with_tesseract(self, img_path, page_idx, total_pages):
+        img = cv2.imread(img_path)
+        enhanced_img = enhance_image_for_ocr(img)
+        processed_images = []
         
         # Two-column detection
         if self.options.get('two_column', False):
@@ -96,12 +144,19 @@ class PDFProcessor:
                 state='OCR',
                 meta={
                     'progress': 50 + int(30 * (page_idx + 0.5) / total_pages),
-                    'stage': f'OCR page {page_idx+1}/{total_pages}',
+                    'stage': f'OCR page {page_idx+1}/{total_pages} (Tesseract)',
                     'current_page': page_idx+1
                 }
             )
             
         return '\n\n'.join(texts)
+        
+    def process_image(self, img_path, page_idx, total_pages):
+        # Choose OCR method based on complexity
+        if self.options.get('complex_layout', False):
+            return self.process_image_with_sahi(img_path, page_idx, total_pages)
+        else:
+            return self.process_image_with_tesseract(img_path, page_idx, total_pages)
         
     def process(self):
         try:
@@ -157,7 +212,7 @@ class PDFProcessor:
             
     def generate_outputs(self):
         output_paths = []
-        base_path = f"{self.app.conf.OUTPUT_DIR}/{self.task_id}"
+        base_path = f"{Config.OUTPUT_DIR}/{self.task_id}"
         
         # Prepare data frames
         hindi_data = []
